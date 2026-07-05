@@ -69,10 +69,15 @@ jobs:
           echo "::warning::MCP Registry publish failed — may need manual 'mcp-publisher publish'"
         continue-on-error: true
 
-      - name: Publish to Smithery
-        run: |
-          npx -y @smithery/cli@latest mcp publish --name "${{ vars.SMITHERY_SERVER_NAME }}" || \
-          echo "::warning::Smithery publish failed — set SMITHERY_SERVER_NAME variable and SMITHERY_API_KEY secret"
+      # Smithery listings for stdio npm servers are created once via smithery.ai
+      # (OAuth) and then track the repo; the CLI cannot publish npm/stdio servers.
+      # Post-release verify below checks the listing via the registry API.
+
+      # Post-release verification: fails the workflow if the release did not
+      # actually land on npm / Official MCP Registry / Pages. This de-masks the
+      # continue-on-error publish steps above (a release with a dead storefront
+      # must be red, not green). Smithery is warn-only (creation is OAuth-gated).
+      - name: Post-release verify
+        run: node scripts/post-release-verify.mjs "${GITHUB_REF_NAME#v}"
         env:
           SMITHERY_API_KEY: ${{ secrets.SMITHERY_API_KEY }}
-        continue-on-error: true
